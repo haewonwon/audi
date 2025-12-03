@@ -216,6 +216,137 @@
       .btn-back:active {
         box-shadow: 0 0 0 #0e3f23;
       }
+
+      /* =========================================
+           📱 반응형 디자인 (모바일/노트북/데스크톱)
+        ========================================= */
+
+      /* 모바일 (기본 스타일 - 768px 미만) */
+      @media (max-width: 767px) {
+        body {
+          padding: 15px;
+        }
+        .container {
+          width: 95%;
+          max-width: 400px;
+          padding: 2rem 1.5rem 1.5rem;
+        }
+        h1 {
+          font-size: 1.4rem;
+        }
+        p {
+          font-size: 0.9rem;
+        }
+        .result-name {
+          font-size: 2rem;
+        }
+      }
+
+      /* 노트북 (768px ~ 1023px) */
+      @media (min-width: 768px) and (max-width: 1023px) {
+        body {
+          padding: 30px;
+        }
+        .container {
+          width: 70%;
+          max-width: 500px;
+          padding: 3rem 2.5rem 2.5rem;
+        }
+        .container::before {
+          top: -50px;
+          border-left: 40px solid transparent;
+          border-right: 40px solid transparent;
+          border-bottom: 60px solid var(--santa-red);
+        }
+        .container::after {
+          top: -60px;
+          width: 30px;
+          height: 30px;
+        }
+        h1 {
+          font-size: 2rem;
+          margin-bottom: 0.8rem;
+        }
+        p {
+          font-size: 1.1rem;
+          margin-bottom: 2rem;
+        }
+        label {
+          font-size: 1rem;
+          margin-bottom: 10px;
+        }
+        input,
+        select {
+          padding: 16px;
+          font-size: 1.1rem;
+        }
+        button {
+          padding: 18px;
+          font-size: 1.2rem;
+        }
+        .result-box {
+          padding: 30px;
+        }
+        .result-name {
+          font-size: 3rem;
+        }
+      }
+
+      /* 데스크톱 (1024px 이상) */
+      @media (min-width: 1024px) {
+        body {
+          padding: 40px;
+        }
+        .container {
+          width: 50%;
+          max-width: 600px;
+          padding: 3.5rem 3rem 3rem;
+        }
+        .container::before {
+          top: -60px;
+          border-left: 50px solid transparent;
+          border-right: 50px solid transparent;
+          border-bottom: 70px solid var(--santa-red);
+        }
+        .container::after {
+          top: -70px;
+          width: 35px;
+          height: 35px;
+        }
+        h1 {
+          font-size: 2.4rem;
+          margin-bottom: 1rem;
+        }
+        p {
+          font-size: 1.2rem;
+          margin-bottom: 2.5rem;
+        }
+        label {
+          font-size: 1.1rem;
+          margin-bottom: 12px;
+        }
+        input,
+        select {
+          padding: 18px;
+          margin-bottom: 25px;
+          font-size: 1.15rem;
+        }
+        button {
+          padding: 20px;
+          font-size: 1.3rem;
+        }
+        .result-box {
+          padding: 35px;
+          margin-top: 30px;
+        }
+        .result-name {
+          font-size: 3.5rem;
+          margin: 20px 0;
+        }
+        .result-box > div:first-child {
+          font-size: 3rem;
+        }
+      }
     </style>
   </head>
   <body>
