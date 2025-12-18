@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>아우디의 일일 산타 체험</title>
 
+    <link href="https://unpkg.com/maplibre-gl/dist/maplibre-gl.css" rel="stylesheet" />
+
     <style>
       /* 🎨 연말 산타 테마 팔레트 */
       :root {
@@ -18,64 +20,86 @@
       body {
         font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
         background: var(--bg-gradient);
-        /* 기존 정적 배경 패턴 제거됨 */
         display: flex;
+        flex-direction: column;
         justify-content: center;
         align-items: center;
         min-height: 100vh;
         margin: 0;
         padding: 20px;
         color: #333;
-        overflow: hidden; /* 스크롤바 방지 */
+        overflow: hidden;
         position: relative;
       }
 
       /* =========================================
-           ❄️ 실시간 눈내림 효과 CSS Start
+           🧭 네비게이션 (수정됨: 간격 및 z-index 조정)
         ========================================= */
-      /* 눈송이를 담을 컨테이너 (클릭 방해 안 하게 가장 뒤로) */
+      .nav-tabs {
+        z-index: 20;
+        /* margin-bottom 제거 */
+        background: rgba(255, 255, 255, 0.9);
+        padding: 10px;
+        border-radius: 50px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        display: flex;
+        gap: 10px;
+        position: relative; /* 추가: 산타 모자와 겹치지 않도록 */
+      }
+
+      .nav-link {
+        text-decoration: none;
+        color: var(--tree-green);
+        font-weight: bold;
+        padding: 8px 20px;
+        border-radius: 30px;
+        transition: 0.3s;
+      }
+
+      .nav-link.active {
+        background: var(--santa-red);
+        color: var(--snow-white);
+        box-shadow: 0 2px 5px rgba(212, 36, 38, 0.4);
+      }
+
+      /* =========================================
+           ❄️ 실시간 눈내림 효과 CSS
+        ========================================= */
       #snow-container {
         position: fixed;
         top: 0;
         left: 0;
         width: 100%;
         height: 100%;
-        pointer-events: none; /* 마우스 클릭 통과 */
-        z-index: 0; /* 컨텐츠보다 뒤에 배치 */
+        pointer-events: none;
+        z-index: 0;
       }
 
-      /* 개별 눈송이 스타일 */
       .snowflake {
         position: absolute;
-        top: -10px; /* 화면 위에서 시작 */
+        top: -10px;
         background: var(--snow-white);
         border-radius: 50%;
         opacity: 0.8;
         pointer-events: none;
-        /* 애니메이션 정의: fall 이름의 키프레임을 실행
-               시간은 JS에서 랜덤으로 줌, 선형적(linear)으로, 무한반복(infinite)
-            */
         animation: fall linear infinite;
       }
 
-      /* 떨어지는 애니메이션 정의 */
       @keyframes fall {
         0% {
           transform: translateY(0) translateX(0);
         }
         100% {
-          /* 화면 아래로 이동하면서 약간 좌우로 흔들림 */
           transform: translateY(105vh) translateX(20px);
         }
       }
-      /* =========================================
-           ❄️ 실시간 눈내림 효과 CSS End
-        ========================================= */
 
-      /* 메인 컨테이너 (z-index를 높여 눈 앞으로 오게 함) */
+      /* =========================================
+           📦 공통 컨테이너 스타일 (수정됨: 간격 추가)
+        ========================================= */
       .container {
         background: var(--snow-white);
-        width: 90%;
+        width: 100%;
         max-width: 400px;
         padding: 2.5rem 2rem 2rem;
         border-radius: 25px;
@@ -83,11 +107,25 @@
         text-align: center;
         position: relative;
         border: 3px solid var(--gold-accent);
-        z-index: 10; /* 눈보다 앞에 배치 */
+        z-index: 10;
+        box-sizing: border-box;
+        margin-top: 80px; /* 추가: 탭과 산타 모자가 겹치지 않도록 간격 확보 */
       }
 
-      /* 🎅 산타 모자 장식 */
-      .container::before {
+      /* SPA용 페이지 래퍼 */
+      .page-section {
+        display: none;
+        width: 100%;
+        display: flex;
+        justify-content: center;
+      }
+
+      .page-section:not(.active) {
+        display: none !important;
+      }
+
+      /* 🎅 산타 모자 장식 (수정됨: z-index 낮춤) */
+      .deco-hat::before {
         content: '';
         position: absolute;
         top: -40px;
@@ -99,8 +137,9 @@
         border-right: 30px solid transparent;
         border-bottom: 50px solid var(--santa-red);
         filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.1));
+        z-index: -1; /* 추가: 탭 뒤로 가도록 */
       }
-      .container::after {
+      .deco-hat::after {
         content: '';
         position: absolute;
         top: -50px;
@@ -111,6 +150,7 @@
         background: var(--snow-white);
         border-radius: 50%;
         box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        z-index: -1; /* 추가: 탭 뒤로 가도록 */
       }
 
       h1 {
@@ -217,183 +257,150 @@
         box-shadow: 0 0 0 #0e3f23;
       }
 
-      /* =========================================
-           📱 반응형 디자인 (모바일/노트북/데스크톱)
-        ========================================= */
+      /* 지도 컨테이너 높이 (수정됨: 마니또 창과 비슷하게 통일) */
+      #map {
+        width: 100%;
+        height: 400px; /* 고정 높이로 변경 */
+        border-radius: 15px;
+        border: 2px solid #ddd;
+      }
 
-      /* 모바일 (기본 스타일 - 768px 미만) */
+      /* 반응형 (수정됨: 지도 높이 관련 미디어 쿼리 제거) */
       @media (max-width: 767px) {
         body {
           padding: 15px;
         }
         .container {
-          width: 95%;
           max-width: 400px;
           padding: 2rem 1.5rem 1.5rem;
         }
         h1 {
           font-size: 1.4rem;
         }
-        p {
-          font-size: 0.9rem;
-        }
         .result-name {
           font-size: 2rem;
         }
       }
-
-      /* 노트북 (768px ~ 1023px) */
       @media (min-width: 768px) and (max-width: 1023px) {
         body {
           padding: 30px;
         }
         .container {
-          width: 70%;
           max-width: 500px;
           padding: 3rem 2.5rem 2.5rem;
         }
-        .container::before {
+        .deco-hat::before {
           top: -50px;
-          border-left: 40px solid transparent;
-          border-right: 40px solid transparent;
-          border-bottom: 60px solid var(--santa-red);
+          border-width: 0 40px 60px 40px;
         }
-        .container::after {
+        .deco-hat::after {
           top: -60px;
           width: 30px;
           height: 30px;
         }
         h1 {
           font-size: 2rem;
-          margin-bottom: 0.8rem;
-        }
-        p {
-          font-size: 1.1rem;
-          margin-bottom: 2rem;
-        }
-        label {
-          font-size: 1rem;
-          margin-bottom: 10px;
-        }
-        input,
-        select {
-          padding: 16px;
-          font-size: 1.1rem;
-        }
-        button {
-          padding: 18px;
-          font-size: 1.2rem;
-        }
-        .result-box {
-          padding: 30px;
         }
         .result-name {
           font-size: 3rem;
         }
+        /* #map { height: ... } <- 제거 */
       }
-
-      /* 데스크톱 (1024px 이상) */
       @media (min-width: 1024px) {
         body {
           padding: 40px;
         }
         .container {
-          width: 50%;
           max-width: 600px;
           padding: 3.5rem 3rem 3rem;
         }
-        .container::before {
+        .deco-hat::before {
           top: -60px;
-          border-left: 50px solid transparent;
-          border-right: 50px solid transparent;
-          border-bottom: 70px solid var(--santa-red);
+          border-width: 0 50px 70px 50px;
         }
-        .container::after {
+        .deco-hat::after {
           top: -70px;
           width: 35px;
           height: 35px;
         }
         h1 {
           font-size: 2.4rem;
-          margin-bottom: 1rem;
-        }
-        p {
-          font-size: 1.2rem;
-          margin-bottom: 2.5rem;
-        }
-        label {
-          font-size: 1.1rem;
-          margin-bottom: 12px;
-        }
-        input,
-        select {
-          padding: 18px;
-          margin-bottom: 25px;
-          font-size: 1.15rem;
-        }
-        button {
-          padding: 20px;
-          font-size: 1.3rem;
-        }
-        .result-box {
-          padding: 35px;
-          margin-top: 30px;
         }
         .result-name {
           font-size: 3.5rem;
-          margin: 20px 0;
         }
-        .result-box > div:first-child {
-          font-size: 3rem;
-        }
+        /* #map { height: 450px; } <- 제거 */
       }
     </style>
   </head>
   <body>
     <div id="snow-container"></div>
 
-    <div class="container">
-      <div id="step-1">
-        <h1>🎄 아우디의 일일 산타 체험 🎅</h1>
-        <p>비밀번호를 입력 후, 마니또 상대를 확인하세요!</p>
+    <nav class="nav-tabs">
+      <a href="#home" class="nav-link active" id="link-home">🎅 마니또</a>
+      <a href="#map" class="nav-link" id="link-map">📍 오시는 길</a>
+    </nav>
 
-        <label for="room-code">🔑 비밀번호</label>
-        <input
-          type="text"
-          id="room-code"
-          placeholder="예: 메리크리스마스"
-          autocomplete="off"
-          style="text-align: center"
-        />
+    <div id="home-page" class="page-section active">
+      <div class="container deco-hat">
+        <div id="step-1">
+          <h1>🎄 아우디의 일일 산타 체험 🎅</h1>
+          <p>비밀번호를 입력 후, 마니또 상대를 확인하세요!</p>
 
-        <label for="my-name">🎁 Who I am?</label>
-        <select id="my-name" style="text-align: center; text-align-last: center">
-          <option value="" disabled selected>이름 선택</option>
-        </select>
+          <label for="room-code">🔑 비밀번호</label>
+          <input
+            type="text"
+            id="room-code"
+            placeholder="예: 메리크리스마스"
+            autocomplete="off"
+            style="text-align: center"
+          />
 
-        <button onclick="checkResult()">결과 확인</button>
-      </div>
+          <label for="my-name">🎁 Who I am?</label>
+          <select id="my-name" style="text-align: center; text-align-last: center">
+            <option value="" disabled selected>이름 선택</option>
+          </select>
 
-      <div id="step-2" class="hidden">
-        <h1>🤫 쉿! 당신의 마니띠는...</h1>
-        <div class="result-box">
-          <div style="font-size: 2.5rem">🎁</div>
-          <div class="result-name" id="target-name">???</div>
-          <div style="font-size: 0.9rem; color: #165b33; font-weight: bold">(몰래 준비하세요!)</div>
+          <button onclick="checkResult()">결과 확인</button>
         </div>
-        <p style="margin-top: 20px; color: var(--santa-red)">주의! 절대 들키면 안 됩니다...</p>
-        <button class="btn-back" onclick="goBack()">🎄 처음으로</button>
+
+        <div id="step-2" class="hidden">
+          <h1>🤫 쉿! 당신의 마니띠는...</h1>
+          <div class="result-box">
+            <div style="font-size: 2.5rem">🎁</div>
+            <div class="result-name" id="target-name">???</div>
+            <div style="font-size: 0.9rem; color: #165b33; font-weight: bold">
+              (몰래 준비하세요!)
+            </div>
+          </div>
+          <p style="margin-top: 20px; color: var(--santa-red)">주의! 절대 들키면 안 됩니다...</p>
+          <button class="btn-back" onclick="goBack()">🎄 처음으로</button>
+        </div>
       </div>
     </div>
 
+    <div id="map-page" class="page-section">
+      <div class="container deco-hat">
+        <div id="map"></div>
+
+        <div style="margin-top: 15px; font-size: 0.9rem; color: #555">
+          ※ 지도를 확대/축소할 수 있습니다.
+        </div>
+      </div>
+    </div>
+
+    <script src="https://unpkg.com/maplibre-gl/dist/maplibre-gl.js"></script>
+
     <script>
+      /* =====================================
+         1. 기존 마니또 로직 (건드리지 않음)
+         ===================================== */
       const FIXED_PASSWORD = '1227';
       const COUPLES_LIST = [
         ['해원', '정은'],
         ['민서', '희주'],
         ['재이', '혜현'],
       ];
-      // ==========================================
 
       let participants = [];
       let partnerMap = {};
@@ -484,7 +491,7 @@
         document.getElementById('step-2').classList.add('hidden');
         document.getElementById('step-1').classList.remove('hidden');
         document.getElementById('target-name').innerText = '???';
-        document.getElementById('password-input').value = '';
+        document.getElementById('room-code').value = '';
       }
 
       function createSnowflake() {
@@ -504,6 +511,62 @@
           snow.remove();
         }, duration * 1000);
       }
+
+      /* =====================================
+         2. 라우터 및 지도 로직
+         ===================================== */
+      let mapInstance = null;
+
+      // 서울 시청 좌표 (원하는 좌표로 수정하세요!)
+      // [경도, 위도] 순서입니다.
+      const DESTINATION_COORDS = [126.9072, 37.4906];
+
+      function router() {
+        const hash = window.location.hash || '#home';
+
+        document.querySelectorAll('.nav-link').forEach((link) => {
+          link.classList.remove('active');
+          if (link.getAttribute('href') === hash) {
+            link.classList.add('active');
+          }
+        });
+
+        const homePage = document.getElementById('home-page');
+        const mapPage = document.getElementById('map-page');
+
+        if (hash === '#map') {
+          homePage.classList.remove('active');
+          mapPage.classList.add('active');
+
+          if (!mapInstance) {
+            initMap();
+          } else {
+            setTimeout(() => mapInstance.resize(), 0);
+          }
+        } else {
+          mapPage.classList.remove('active');
+          homePage.classList.add('active');
+        }
+      }
+
+      function initMap() {
+        mapInstance = new maplibregl.Map({
+          container: 'map',
+          style: 'https://tiles.openfreemap.org/styles/liberty',
+          center: DESTINATION_COORDS,
+          zoom: 14,
+        });
+
+        mapInstance.addControl(new maplibregl.NavigationControl());
+
+        new maplibregl.Marker({ color: '#d42426' })
+          .setLngLat(DESTINATION_COORDS)
+          .setPopup(new maplibregl.Popup({ offset: 25 }).setText('🎄 파티 장소!'))
+          .addTo(mapInstance);
+      }
+
+      window.addEventListener('hashchange', router);
+      window.addEventListener('load', router);
     </script>
   </body>
 </html>
